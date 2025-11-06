@@ -1,38 +1,66 @@
-# Welcome to React Router!
+# 🚀 Sistema de Gestión de Repartos - React Router v7
 
-A modern, production-ready template for building full-stack React applications using React Router.
+Sistema completo de gestión de clientes, camiones y repartos desarrollado con **React Router v7** y **TypeScript**. Migrado desde Astro para una mejor experiencia de desarrollo con React.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+## ✨ Características
 
-## Features
+- 🔐 **Autenticación completa** con JWT y cookies seguras
+- 👥 **Gestión de Clientes** - CRUD completo con validaciones
+- 🚛 **Gestión de Camiones** - Control de flota vehicular
+- 📦 **Sistema de Repartos** - Planificación y seguimiento
+- 🗺️ **Rutas optimizadas** - Gestión de recorridos
+- 📊 **Dashboard interactivo** - Estadísticas en tiempo real
+- 🎨 **Interfaz responsive** - Diseño optimizado para móviles
+- 🔒 **Base de datos segura** - PostgreSQL en Neon Cloud
+- ⚡ **Performance** - SSR con React Router v7
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+## 🛠️ Tecnologías
 
-## Getting Started
+- **Frontend**: React Router v7, TypeScript, Tailwind CSS
+- **Backend**: Node.js integrado con React Router
+- **Base de Datos**: PostgreSQL (Neon Cloud)
+- **Autenticación**: JWT + bcrypt
+- **Validación**: Validaciones nativas + TypeScript
+- **Styling**: Tailwind CSS v4
 
-### Installation
+## �️ Estructura de Base de Datos
 
-Install the dependencies:
+### Tablas implementadas:
+- **usuarios** - Sistema de autenticación (4+ usuarios)
+- **clientes** - Gestión de clientes (16 registros actuales)
+- **camiones** - Flota vehicular (3 camiones)
+- **rutas** - Recorridos (Lunes, Martes, etc.)
+- **repartos** - Entregas asignadas
+- **reparto_cliente** - Relación many-to-many
 
+## 🚀 Instalación y Configuración
+
+### Prerrequisitos
+- Node.js 18+
+- PostgreSQL (Neon Cloud configurado)
+
+### 1. Configurar variables de entorno
+```bash
+# Copiar las variables del proyecto Astro existente
+cp ../Astro/.env .env
+```
+
+### 2. Instalar dependencias
 ```bash
 npm install
 ```
 
-### Development
+### 3. Verificar conexión a base de datos
+```bash
+node analyze-db.js
+```
 
-Start the development server with HMR:
-
+### 4. Desarrollo
 ```bash
 npm run dev
 ```
 
-Your application will be available at `http://localhost:5173`.
+Your application will be available at `http://localhost:5174/`.
 
 ## Building for Production
 

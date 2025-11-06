@@ -5,9 +5,12 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import { getUserFromRequest } from "~/lib/auth.server";
+import type { SessionUser } from "~/types/database";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
@@ -23,16 +26,22 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
+export async function loader({ request }: Route.LoaderArgs) {
+  const user = getUserFromRequest(request);
+  return { user };
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="es">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="description" content="Sistema de Gestión de Repartos" />
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className="bg-gray-50 text-gray-900">
         {children}
         <ScrollRestoration />
         <Scripts />
@@ -42,7 +51,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  const { user } = useLoaderData<{ user: SessionUser | null }>();
+  
+  return (
+    <div className="min-h-screen">
+      <Outlet context={{ user }} />
+    </div>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
