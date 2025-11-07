@@ -54,7 +54,7 @@ export function ClienteMap({
   return (
     <MapComponent 
       center={mapCenter} 
-      zoom={centerOnClientes ? 13 : 12}
+      zoom={centerOnClientes ? (clientesConCoordenadas.length === 1 ? 16 : 13) : 12}
       style={style}
     >
       {/* Marcadores de clientes */}
@@ -91,12 +91,9 @@ interface ClienteMarkerProps {
 function ClienteMarker({ cliente, isSelected, onSelect, Marker, Popup }: ClienteMarkerProps) {
   if (!cliente.latitud || !cliente.longitud) return null;
 
-  const markerIcon = createCustomIcon(isSelected ? 'selected' : 'default');
-
   return (
     <Marker
       position={[cliente.latitud, cliente.longitud]}
-      icon={markerIcon}
       eventHandlers={{
         click: () => onSelect?.(cliente),
       }}
@@ -152,50 +149,7 @@ function RouteLines({ clientes, Polyline }: RouteLinesProps) {
   );
 }
 
-// Crear iconos personalizados para los marcadores
-function createCustomIcon(type: 'default' | 'selected') {
-  if (typeof window === 'undefined') return null;
 
-  // Importar L dinámicamente
-  const L = require('leaflet');
-
-  const iconHtml = type === 'selected' 
-    ? `<div style="
-        background-color: #ef4444;
-        width: 25px;
-        height: 25px;
-        border-radius: 50%;
-        border: 3px solid white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 12px;
-        font-weight: bold;
-      ">📍</div>`
-    : `<div style="
-        background-color: #3b82f6;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        border: 2px solid white;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 10px;
-      ">📍</div>`;
-
-  return L.divIcon({
-    html: iconHtml,
-    className: 'custom-div-icon',
-    iconSize: type === 'selected' ? [25, 25] : [20, 20],
-    iconAnchor: type === 'selected' ? [12, 12] : [10, 10],
-    popupAnchor: [0, type === 'selected' ? -12 : -10]
-  });
-}
 
 // Agregar estilos CSS necesarios para Leaflet
 export function LeafletStyles() {
