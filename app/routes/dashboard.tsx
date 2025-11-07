@@ -1,23 +1,18 @@
 import { useLoaderData, Link, Form } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { redirectIfNotAuthenticated } from "~/lib/auth.server";
-import { getDashboardStats, getAllClientes } from "~/lib/database.server";
-import type { DashboardStats, SessionUser, Cliente } from "~/types/database";
-import { DashboardMap } from "~/components/dashboard/DashboardMap";
-import { LeafletStyles } from "~/components/clientes/ClienteMap";
+import { getDashboardStats } from "~/lib/database.server";
+import type { DashboardStats, SessionUser } from "~/types/database";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = redirectIfNotAuthenticated(request);
-  const [stats, clientes] = await Promise.all([
-    getDashboardStats(),
-    getAllClientes()
-  ]);
+  const stats = await getDashboardStats();
   
-  return { user, stats, clientes };
+  return { user, stats };
 }
 
 export default function DashboardPage() {
-  const { user, stats, clientes } = useLoaderData<{ user: SessionUser; stats: DashboardStats; clientes: Cliente[] }>();
+  const { user, stats } = useLoaderData<{ user: SessionUser; stats: DashboardStats }>();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -214,25 +209,25 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Mapa Dashboard */}
-        <div className="space-y-6">
-          <div>
-            <h2 className="text-lg font-medium text-gray-900 mb-4">
-              🗺️ Vista General de Clientes
-            </h2>
-            <DashboardMap 
-              clientes={clientes}
-              onClienteSelect={(cliente) => {
-                // Navegar al detalle del cliente
-                window.location.href = `/clientes/${cliente.id}`;
-              }}
-            />
+        {/* Sistema de Reportes - En Construcción */}
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🚧</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                Sistema de Reportes en Construcción
+              </h3>
+              <p className="text-gray-500 mb-6">
+                Próximamente: Dashboard avanzado con gráficos, reportes de eficiencia, 
+                estadísticas por período y exportación a PDF/Excel
+              </p>
+              <div className="inline-flex items-center px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium">
+                📊 Funcionalidad pendiente de implementación
+              </div>
+            </div>
           </div>
         </div>
       </main>
-      
-      {/* Estilos de Leaflet */}
-      <LeafletStyles />
     </div>
   );
 }
