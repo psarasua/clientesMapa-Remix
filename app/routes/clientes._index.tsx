@@ -118,7 +118,6 @@ export default function ClientesIndex() {
       <ClienteFilters
         searchValue={search}
         onSearchChange={handleSearch}
-        onNewCliente={handleNewCliente}
       />
 
       {showMap ? (
