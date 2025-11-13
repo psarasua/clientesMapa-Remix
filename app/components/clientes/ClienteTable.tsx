@@ -48,13 +48,19 @@ function ClienteTableHeader() {
     <thead className="bg-gray-50">
       <tr>
         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          Cliente
+          Cliente/Sucursal
         </th>
         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          Contacto
+          Razón Social/Nombre
         </th>
         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          Ubicación
+          RUT
+        </th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Teléfono
+        </th>
+        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Dirección
         </th>
         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
           Estado
@@ -75,38 +81,68 @@ interface ClienteTableRowProps {
 function ClienteTableRow({ cliente, onViewLocation }: ClienteTableRowProps) {
   return (
     <tr className="hover:bg-gray-50">
+      {/* Cliente/Sucursal - Solo ID, código y sucursal */}
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div>
+          <div className="text-sm text-gray-500">
+            ID: {cliente.id} {cliente.codigoalte && ` • ${cliente.codigoalte}`}
+          </div>
+          {cliente.sucursal && (
+            <div className="mt-1">
+              <span className="inline-flex items-center px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                Suc. {cliente.sucursal}
+              </span>
+            </div>
+          )}
+        </div>
+      </td>
+
+      {/* Razón Social/Nombre */}
       <td className="px-6 py-4 whitespace-nowrap">
         <div>
           <div className="text-sm font-medium text-gray-900">
-            {cliente.nombre}
+            {cliente.razonsocial || cliente.nombre}
           </div>
-          <div className="text-sm text-gray-500">
-            ID: {cliente.id}
-          </div>
+          {cliente.razonsocial && cliente.razonsocial !== cliente.nombre && (
+            <div className="text-sm text-gray-500 mt-1">
+              {cliente.nombre}
+            </div>
+          )}
         </div>
       </td>
+
+      {/* RUT */}
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="text-sm text-gray-900">
-          {cliente.telefono || "No registrado"}
-        </div>
-        <div className="text-sm text-gray-500">
           {cliente.rut || "Sin RUT"}
         </div>
       </td>
-      <td className="px-6 py-4">
+
+      {/* Teléfono */}
+      <td className="px-6 py-4 whitespace-nowrap">
         <div className="text-sm text-gray-900">
-          {cliente.direccion}
-        </div>
-        <div className="text-sm text-gray-500">
-          {cliente.latitud && cliente.longitud 
-            ? `${cliente.latitud}, ${cliente.longitud}`
-            : "Sin coordenadas"
-          }
+          {cliente.telefono || "Sin teléfono"}
         </div>
       </td>
+
+      {/* Dirección - Dirección física, departamento y localidad */}
+      <td className="px-6 py-4">
+        <div>
+          <div className="text-sm text-gray-900">
+            {cliente.direccion}
+          </div>
+          <div className="text-sm text-gray-500 mt-1">
+            {cliente.departamento}, {cliente.localidad}
+          </div>
+        </div>
+      </td>
+
+      {/* Estado */}
       <td className="px-6 py-4 whitespace-nowrap">
         <ClienteStatusBadge status={cliente.estado || "Activo"} />
       </td>
+
+      {/* Acciones */}
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
         <ClienteActions cliente={cliente} onViewLocation={onViewLocation} />
       </td>
@@ -276,9 +312,28 @@ function ClienteLocationModal({ cliente, onClose }: ClienteLocationModalProps) {
           {/* Información del cliente con diseño de tarjeta */}
           <div className="mb-6 bg-linear-to-r from-gray-50 to-gray-100 rounded-xl p-5 border border-gray-200">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">
-                {cliente.nombre}
-              </h3>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  {cliente.nombre}
+                </h3>
+                {cliente.razonsocial && cliente.razonsocial !== cliente.nombre && (
+                  <p className="text-sm text-gray-600 italic">
+                    {cliente.razonsocial}
+                  </p>
+                )}
+                <div className="flex gap-2 mt-1">
+                  {cliente.codigoalte && (
+                    <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+                      Código: {cliente.codigoalte}
+                    </span>
+                  )}
+                  {cliente.sucursal && (
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                      Sucursal: {cliente.sucursal}
+                    </span>
+                  )}
+                </div>
+              </div>
               <span className={`inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full ${
                 cliente.estado === 'Activo' 
                   ? 'bg-green-100 text-green-800 border border-green-200' 
@@ -291,7 +346,7 @@ function ClienteLocationModal({ cliente, onClose }: ClienteLocationModalProps) {
               </span>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-3">
                 <div className="flex items-start space-x-2">
                   <svg className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -318,6 +373,29 @@ function ClienteLocationModal({ cliente, onClose }: ClienteLocationModalProps) {
               <div className="space-y-3">
                 <div className="flex items-start space-x-2">
                   <svg className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m6 0a2 2 0 100-4m-3-3V9a2 2 0 012-2h2a2 2 0 012 2v3.75M6 12a2 2 0 104 0 2 2 0 00-4 0z"></path>
+                  </svg>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Departamento</p>
+                    <p className="text-sm text-gray-900 font-medium">{cliente.departamento || 'No asignado'}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-2">
+                  <svg className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Localidad</p>
+                    <p className="text-sm text-gray-900 font-medium">{cliente.localidad || 'Sin localidad'}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-start space-x-2">
+                  <svg className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                   </svg>
                   <div>
@@ -325,6 +403,18 @@ function ClienteLocationModal({ cliente, onClose }: ClienteLocationModalProps) {
                     <p className="text-xs text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded">{lat.toFixed(6)}, {lng.toFixed(6)}</p>
                   </div>
                 </div>
+                
+                {cliente.rut && (
+                  <div className="flex items-start space-x-2">
+                    <svg className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">RUT</p>
+                      <p className="text-sm text-gray-900 font-medium">{cliente.rut}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

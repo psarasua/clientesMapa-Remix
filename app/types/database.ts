@@ -25,6 +25,21 @@ export interface LoginRequest {
   password: string;
 }
 
+// Tabla: departamentos
+export interface Departamento {
+  id: number;
+  descripcion: string;
+  created_at: Date | null;
+}
+
+// Tabla: localidades
+export interface Localidad {
+  id: number;
+  departamento_id: number;
+  descripcion: string;
+  created_at: Date | null;
+}
+
 // Tabla: clientes
 export interface Cliente {
   id: number;
@@ -37,6 +52,20 @@ export interface Cliente {
   estado: string | null; // DEFAULT: 'Activo'
   longitud: number | null; // numeric(11,8)
   latitud: number | null;  // numeric(10,7)
+  sucursal: string | null;
+  departamento: string | null;
+  localidad: string | null;
+}
+
+// DTO para crear departamento
+export interface CreateDepartamento {
+  descripcion: string;
+}
+
+// DTO para crear localidad
+export interface CreateLocalidad {
+  departamento_id: number;
+  descripcion: string;
 }
 
 // DTO para crear cliente
@@ -50,6 +79,9 @@ export interface CreateCliente {
   estado?: string | null;
   longitud?: number | null;
   latitud?: number | null;
+  sucursal?: string | null;
+  departamento?: string | null;
+  localidad?: string | null;
 }
 
 // DTO para actualizar cliente
@@ -248,6 +280,9 @@ export interface ClienteFormData {
   rut: string;
   longitud: string; // Como string para formularios
   latitud: string;  // Como string para formularios
+  sucursal: string;
+  departamento: string;
+  localidad: string;
 }
 
 // Tipos de estado para UI
@@ -274,6 +309,6 @@ export interface ClienteMapData {
 }
 
 // Exportar tipos de base de datos como union
-export type DatabaseEntity = Usuario | Cliente | Camion | Ruta | Reparto | RepartoCliente;
-export type CreateDatabaseEntity = CreateUsuario | CreateCliente | CreateCamion | CreateRuta | CreateReparto | CreateRepartoCliente;
+export type DatabaseEntity = Usuario | Cliente | Camion | Ruta | Reparto | RepartoCliente | Departamento | Localidad;
+export type CreateDatabaseEntity = CreateUsuario | CreateCliente | CreateCamion | CreateRuta | CreateReparto | CreateRepartoCliente | CreateDepartamento | CreateLocalidad;
 export type UpdateDatabaseEntity = UpdateCliente | UpdateCamion | UpdateRuta | UpdateReparto;

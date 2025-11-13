@@ -25,10 +25,18 @@ export async function loader({ request }: LoaderFunctionArgs) {
     
     // Filtrar por búsqueda si existe
     const filteredClientes = search 
-      ? clientes.filter(cliente => 
-          cliente.nombre.toLowerCase().includes(search.toLowerCase()) ||
-          cliente.direccion.toLowerCase().includes(search.toLowerCase())
-        )
+      ? clientes.filter(cliente => {
+          const searchTerm = search.toLowerCase();
+          return (
+            cliente.nombre.toLowerCase().includes(searchTerm) ||
+            cliente.direccion.toLowerCase().includes(searchTerm) ||
+            (cliente.sucursal && cliente.sucursal.toLowerCase().includes(searchTerm)) ||
+            (cliente.departamento && cliente.departamento.toLowerCase().includes(searchTerm)) ||
+            (cliente.localidad && cliente.localidad.toLowerCase().includes(searchTerm)) ||
+            (cliente.rut && cliente.rut.toLowerCase().includes(searchTerm)) ||
+            (cliente.telefono && cliente.telefono.toLowerCase().includes(searchTerm))
+          );
+        })
       : clientes;
     
     // Paginación

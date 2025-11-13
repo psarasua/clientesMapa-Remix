@@ -22,7 +22,11 @@ import type {
   DashboardStats,
   PaginatedResponse,
   ClienteFilters,
-  RepartoFilters
+  RepartoFilters,
+  Departamento,
+  CreateDepartamento,
+  Localidad,
+  CreateLocalidad
 } from '~/types/database';
 
 // Pool de conexiones a PostgreSQL
@@ -41,9 +45,15 @@ export function getDbPool(): Pool {
       ssl: {
         rejectUnauthorized: false
       },
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      max: 20, // Aumentamos el número máximo de conexiones
+      min: 2,  // Mantenemos algunas conexiones mínimas
+      idleTimeoutMillis: 60000, // 1 minuto para conexiones idle
+      connectionTimeoutMillis: 30000, // 30 segundos para conectar
+      acquireTimeoutMillis: 30000, // 30 segundos para obtener conexión del pool
+      statement_timeout: 60000, // 60 segundos timeout para statements
+      query_timeout: 60000, // 60 segundos timeout para queries
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
     });
     
     pool.on('error', (err: Error) => {
@@ -54,23 +64,42 @@ export function getDbPool(): Pool {
   return pool;
 }
 
-// Función helper para ejecutar queries
-export async function query<T = any>(text: string, params?: any[]): Promise<T[]> {
+// Función helper para ejecutar queries con retry
+export async function query<T = any>(text: string, params?: any[], retries = 3): Promise<T[]> {
   const dbPool = getDbPool();
   let client: PoolClient | null = null;
+  let lastError: Error | null = null;
   
-  try {
-    client = await dbPool.connect();
-    const result = await client.query(text, params);
-    return result.rows;
-  } catch (error) {
-    console.error('Error en query de base de datos:', error);
-    throw error;
-  } finally {
-    if (client) {
-      client.release();
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      client = await dbPool.connect();
+      const result = await client.query(text, params);
+      return result.rows;
+    } catch (error: any) {
+      lastError = error;
+      console.error(`Error en query de base de datos (intento ${attempt}/${retries}):`, error.message);
+      
+      if (client) {
+        client.release(true); // Liberar conexión con error
+        client = null;
+      }
+      
+      // Si es un error de conexión y no es el último intento, esperar antes de reintentar
+      if (attempt < retries && (error.code === 'ECONNRESET' || error.code === 'ECONNREFUSED' || error.message.includes('timeout'))) {
+        console.log(`Reintentando en ${attempt * 1000}ms...`);
+        await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+        continue;
+      }
+      
+      throw error;
+    } finally {
+      if (client) {
+        client.release();
+      }
     }
   }
+  
+  throw lastError || new Error('Error desconocido en query');
 }
 
 // Función para cerrar todas las conexiones
@@ -78,6 +107,29 @@ export async function closeDbConnection(): Promise<void> {
   if (pool) {
     await pool.end();
     pool = null;
+  }
+}
+
+// Función para verificar el estado de las conexiones
+export function getPoolStats() {
+  if (!pool) return null;
+  
+  return {
+    totalCount: pool.totalCount,
+    idleCount: pool.idleCount,
+    waitingCount: pool.waitingCount,
+  };
+}
+
+// Función para limpiar conexiones idle periódicamente (útil para desarrollo)
+export async function cleanIdleConnections(): Promise<void> {
+  if (pool) {
+    console.log('🧹 Limpiando conexiones idle del pool...');
+    const stats = getPoolStats();
+    console.log('📊 Stats del pool antes:', stats);
+    
+    // No cerramos el pool completamente, solo forzamos limpieza de idle
+    // Las conexiones idle se cerrarán automáticamente según idleTimeoutMillis
   }
 }
 
@@ -132,14 +184,17 @@ export async function createCliente(clienteData: CreateCliente): Promise<Cliente
     rut,
     estado = 'Activo',
     longitud,
-    latitud
+    latitud,
+    sucursal,
+    departamento,
+    localidad
   } = clienteData;
 
   const result = await query<Cliente>(
-    `INSERT INTO clientes (codigoalte, razonsocial, nombre, direccion, telefono, rut, estado, longitud, latitud)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `INSERT INTO clientes (codigoalte, razonsocial, nombre, direccion, telefono, rut, estado, longitud, latitud, sucursal, departamento, localidad)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      RETURNING *`,
-    [codigoalte, razonsocial, nombre, direccion, telefono, rut, estado, longitud, latitud]
+    [codigoalte, razonsocial, nombre, direccion, telefono, rut, estado, longitud, latitud, sucursal, departamento, localidad]
   );
 
   return result[0];
@@ -635,6 +690,67 @@ export async function createRepartoWithClientes(
 }
 
 // =====================================
+// CRUD para DEPARTAMENTOS y LOCALIDADES
+// =====================================
+
+export async function getAllDepartamentos(): Promise<Departamento[]> {
+  return await query<Departamento>('SELECT * FROM departamentos ORDER BY descripcion ASC');
+}
+
+export async function getDepartamentoById(id: number): Promise<Departamento | null> {
+  const result = await query<Departamento>('SELECT * FROM departamentos WHERE id = $1', [id]);
+  return result[0] || null;
+}
+
+export async function createDepartamento(departamentoData: CreateDepartamento): Promise<Departamento> {
+  const result = await query<Departamento>(
+    'INSERT INTO departamentos (descripcion) VALUES ($1) RETURNING *',
+    [departamentoData.descripcion]
+  );
+  return result[0];
+}
+
+export async function getAllLocalidades(): Promise<Localidad[]> {
+  return await query<Localidad>(
+    `SELECT l.*, d.descripcion as departamento_nombre 
+     FROM localidades l 
+     INNER JOIN departamentos d ON l.departamento_id = d.id 
+     ORDER BY d.descripcion ASC, l.descripcion ASC`
+  );
+}
+
+export async function getLocalidadesByDepartamento(departamentoId: number): Promise<Localidad[]> {
+  return await query<Localidad>(
+    'SELECT * FROM localidades WHERE departamento_id = $1 ORDER BY descripcion ASC',
+    [departamentoId]
+  );
+}
+
+export async function createLocalidad(localidadData: CreateLocalidad): Promise<Localidad> {
+  const result = await query<Localidad>(
+    'INSERT INTO localidades (departamento_id, descripcion) VALUES ($1, $2) RETURNING *',
+    [localidadData.departamento_id, localidadData.descripcion]
+  );
+  return result[0];
+}
+
+// Función para obtener estadísticas de clientes por ubicación
+export async function getClientesByUbicacion(): Promise<any[]> {
+  return await query<any>(`
+    SELECT 
+      departamento,
+      localidad,
+      COUNT(*) as total_clientes,
+      COUNT(CASE WHEN longitud IS NOT NULL AND latitud IS NOT NULL THEN 1 END) as con_coordenadas,
+      COUNT(CASE WHEN estado = 'Activo' THEN 1 END) as activos
+    FROM clientes 
+    WHERE departamento IS NOT NULL 
+    GROUP BY departamento, localidad
+    ORDER BY departamento, localidad
+  `);
+}
+
+// =====================================
 // USUARIOS y AUTENTICACIÓN
 // =====================================
 
@@ -663,31 +779,77 @@ export async function createUser(userData: CreateUsuario): Promise<Usuario> {
 // =====================================
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const [clientesTotal, camionesTotal, repartosTotal, rutasTotal] = await Promise.all([
-    query<{count: string}>('SELECT COUNT(*) as count FROM clientes'),
-    query<{count: string}>('SELECT COUNT(*) as count FROM camiones'),
-    query<{count: string}>('SELECT COUNT(*) as count FROM repartos'),
-    query<{count: string}>('SELECT COUNT(*) as count FROM rutas'),
-  ]);
+  try {
+    // Usar una sola query con CTEs para obtener todas las estadísticas de una vez
+    const statsQuery = `
+      WITH stats AS (
+        SELECT 
+          (SELECT COUNT(*) FROM clientes) as total_clientes,
+          (SELECT COUNT(*) FROM clientes WHERE estado = 'Activo') as clientes_activos,
+          (SELECT COUNT(*) FROM camiones) as total_camiones,
+          (SELECT COUNT(*) FROM repartos) as total_repartos,
+          (SELECT COUNT(*) FROM rutas) as total_rutas,
+          (SELECT COUNT(*) FROM camiones WHERE id NOT IN (
+            SELECT DISTINCT camion_id FROM repartos WHERE camion_id IS NOT NULL
+          )) as camiones_sin_asignar
+      )
+      SELECT * FROM stats;
+    `;
 
-  const clientesActivos = await query<{count: string}>(
-    "SELECT COUNT(*) as count FROM clientes WHERE estado = 'Activo'"
-  );
+    const result = await query<{
+      total_clientes: string;
+      clientes_activos: string;
+      total_camiones: string;
+      total_repartos: string;
+      total_rutas: string;
+      camiones_sin_asignar: string;
+    }>(statsQuery);
 
-  const camionesSinAsignar = await query<{count: string}>(
-    'SELECT COUNT(*) as count FROM camiones WHERE id NOT IN (SELECT DISTINCT camion_id FROM repartos WHERE camion_id IS NOT NULL)'
-  );
+    if (!result || result.length === 0) {
+      // Valores por defecto si no hay datos
+      return {
+        totalClientes: 0,
+        totalCamiones: 0,
+        totalRepartos: 0,
+        totalRutas: 0,
+        clientesActivos: 0,
+        repartosHoy: 0,
+        camionesSinAsignar: 0,
+      };
+    }
 
-  return {
-    totalClientes: parseInt(clientesTotal[0].count),
-    totalCamiones: parseInt(camionesTotal[0].count),
-    totalRepartos: parseInt(repartosTotal[0].count),
-    totalRutas: parseInt(rutasTotal[0].count),
-    clientesActivos: parseInt(clientesActivos[0].count),
-    repartosHoy: 0, // TODO: implementar cuando tengamos fecha en repartos
-    camionesSinAsignar: parseInt(camionesSinAsignar[0].count),
-  };
+    const stats = result[0];
+
+    return {
+      totalClientes: parseInt(stats.total_clientes) || 0,
+      totalCamiones: parseInt(stats.total_camiones) || 0,
+      totalRepartos: parseInt(stats.total_repartos) || 0,
+      totalRutas: parseInt(stats.total_rutas) || 0,
+      clientesActivos: parseInt(stats.clientes_activos) || 0,
+      repartosHoy: 0, // TODO: implementar cuando tengamos fecha en repartos
+      camionesSinAsignar: parseInt(stats.camiones_sin_asignar) || 0,
+    };
+  } catch (error) {
+    console.error('Error obteniendo estadísticas del dashboard:', error);
+    
+    // Retornar estadísticas por defecto en caso de error
+    return {
+      totalClientes: 0,
+      totalCamiones: 0,
+      totalRepartos: 0,
+      totalRutas: 0,
+      clientesActivos: 0,
+      repartosHoy: 0,
+      camionesSinAsignar: 0,
+    };
+  }
 }
 
 // Exportar tipos para uso en componentes
-export type { Cliente, CreateCliente, UpdateCliente, Camion, CamionWithStats, CreateCamion, UpdateCamion, Ruta, Reparto, RepartoWithDetails, CreateReparto, DashboardStats };
+export type { 
+  Cliente, CreateCliente, UpdateCliente, 
+  Camion, CamionWithStats, CreateCamion, UpdateCamion, 
+  Ruta, Reparto, RepartoWithDetails, CreateReparto, 
+  DashboardStats, Departamento, CreateDepartamento, 
+  Localidad, CreateLocalidad 
+};
