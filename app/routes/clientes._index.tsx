@@ -10,6 +10,7 @@ import { ClienteTable } from "~/components/clientes/ClienteTable";
 import { ClienteFilters } from "~/components/clientes/ClienteFilters";
 import { ClienteMap, LeafletStyles } from "~/components/clientes/ClienteMap";
 import { Pagination } from "~/components/ui/Pagination";
+import { ErrorBoundary as CustomErrorBoundary } from "~/components/ui/ErrorBoundary";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await redirectIfNotAuthenticated(request);
@@ -158,4 +159,8 @@ export default function ClientesIndex() {
       <LeafletStyles />
     </PageLayout>
   );
+}
+
+export function ErrorBoundary() {
+  return <CustomErrorBoundary />;
 }

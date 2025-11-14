@@ -1,8 +1,9 @@
-import { useLoaderData, Link, Form } from "react-router";
+import { useLoaderData, Link } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { redirectIfNotAuthenticated } from "~/lib/auth.server";
 import { getDashboardStats } from "~/lib/database.server";
 import type { DashboardStats, SessionUser } from "~/types/database";
+import { PageLayout, PageHeader } from "~/components/ui/Layout";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = redirectIfNotAuthenticated(request);
@@ -15,67 +16,11 @@ export default function DashboardPage() {
   const { user, stats } = useLoaderData<{ user: SessionUser; stats: DashboardStats }>();
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-gray-600">Bienvenido, {user.nombre_completo}</p>
-            </div>
-            <Form method="post" action="/logout">
-              <button
-                type="submit"
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-              >
-                Cerrar Sesión
-              </button>
-            </Form>
-          </div>
-        </div>
-      </header>
-
-      {/* Navigation */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
-            <Link
-              to="/dashboard"
-              className="border-b-2 border-blue-500 text-blue-600 px-1 pt-1 pb-4 text-sm font-medium"
-            >
-              Dashboard
-            </Link>
-            <Link
-              to="/clientes"
-              className="border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 px-1 pt-1 pb-4 text-sm font-medium"
-            >
-              Clientes
-            </Link>
-            <Link
-              to="/camiones"
-              className="border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 px-1 pt-1 pb-4 text-sm font-medium"
-            >
-              Camiones
-            </Link>
-            <Link
-              to="/repartos"
-              className="border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 px-1 pt-1 pb-4 text-sm font-medium"
-            >
-              Repartos
-            </Link>
-            <Link
-              to="/rutas"
-              className="border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 px-1 pt-1 pb-4 text-sm font-medium"
-            >
-              Rutas
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <PageLayout>
+      <PageHeader
+        title="Dashboard"
+        subtitle="Panel de control principal"
+      />
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <div className="bg-white overflow-hidden shadow rounded-lg">
@@ -227,7 +172,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
-  );
-}
+      </PageLayout>
+    );
+  }

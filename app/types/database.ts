@@ -111,11 +111,7 @@ export interface UpdateCamion extends Partial<CreateCamion> {
   id: number;
 }
 
-// Camión con estadísticas
-export interface CamionWithStats extends Camion {
-  total_repartos?: number;
-  repartos_activos?: number;
-}
+
 
 // Tabla: rutas
 export interface Ruta {

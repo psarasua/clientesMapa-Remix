@@ -8,6 +8,7 @@ import {
   type RepartoWithDetails 
 } from "~/lib/database.server";
 import { PageLayout, PageHeader } from "~/components/ui/Layout";
+import { ErrorBoundary as CustomErrorBoundary } from "~/components/ui/ErrorBoundary";
 import { Card } from "~/components/ui/Card";
 import { Button } from "~/components/ui/Button";
 import { RepartoTable } from "~/components/repartos/RepartoTable";
@@ -189,4 +190,8 @@ export default function RepartosIndex() {
       </Card>
     </PageLayout>
   );
+}
+
+export function ErrorBoundary() {
+  return <CustomErrorBoundary />;
 }

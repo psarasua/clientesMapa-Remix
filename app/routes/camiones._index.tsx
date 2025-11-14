@@ -1,8 +1,9 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData, useSearchParams, useNavigate } from "react-router";
 import { redirectIfNotAuthenticated } from "~/lib/auth.server";
-import { getCamionesWithStats, type CamionWithStats } from "~/lib/database.server";
+import { getAllCamiones, type Camion } from "~/lib/database.server";
 import { PageLayout, PageHeader } from "~/components/ui/Layout";
+import { ErrorBoundary as CustomErrorBoundary } from "~/components/ui/ErrorBoundary";
 import { Card } from "~/components/ui/Card";
 import { Button } from "~/components/ui/Button";
 import { CamionTable } from "~/components/camiones/CamionTable";
@@ -19,13 +20,19 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const offset = (page - 1) * limit;
   
   try {
-    const camiones = await getCamionesWithStats();
+    const camiones = await getAllCamiones();
     
     // Filtrar por búsqueda si existe
     const filteredCamiones = search 
-      ? camiones.filter(camion => 
-          camion.nombre.toLowerCase().includes(search.toLowerCase())
-        )
+      ? camiones.filter(camion => {
+          const searchTerm = search.toLowerCase();
+          return (
+            camion.nombre.toLowerCase().includes(searchTerm) ||
+            camion.id.toString().includes(searchTerm) ||
+            `camion ${camion.id}`.toLowerCase().includes(searchTerm) ||
+            `vehiculo ${camion.id}`.toLowerCase().includes(searchTerm)
+          );
+        })
       : camiones;
     
     // Paginación
@@ -118,4 +125,8 @@ export default function CamionesIndex() {
       </Card>
     </PageLayout>
   );
+}
+
+export function ErrorBoundary() {
+  return <CustomErrorBoundary />;
 }

@@ -5,7 +5,6 @@ import type {
   CreateCliente, 
   UpdateCliente,
   Camion,
-  CamionWithStats,
   CreateCamion, 
   UpdateCamion,
   Ruta, 
@@ -236,24 +235,7 @@ export async function getCamionById(id: number): Promise<Camion | null> {
   return result[0] || null;
 }
 
-export async function getCamionesWithStats(): Promise<CamionWithStats[]> {
-  const camiones = await getAllCamiones();
-  
-  const repartosQuery = await query<{camion_id: number, total: string}>(
-    'SELECT camion_id, COUNT(*) as total FROM repartos WHERE camion_id IS NOT NULL GROUP BY camion_id'
-  );
-  
-  const repartosMap = new Map<number, number>();
-  repartosQuery.forEach(row => {
-    repartosMap.set(row.camion_id, parseInt(row.total));
-  });
-  
-  return camiones.map(camion => ({
-    ...camion,
-    total_repartos: repartosMap.get(camion.id) || 0,
-    repartos_activos: Math.floor(Math.random() * 2), // Simulado
-  }));
-}
+
 
 export async function createCamion(camionData: CreateCamion): Promise<Camion> {
   const result = await query<Camion>(
@@ -274,6 +256,14 @@ export async function updateCamion(id: number, camionData: Partial<CreateCamion>
   );
 
   return result[0] || null;
+}
+
+export async function getRepartosByCamion(camionId: number): Promise<Reparto[]> {
+  const result = await query<Reparto>(
+    'SELECT * FROM repartos WHERE camion_id = $1 ORDER BY fecha_programada DESC, id DESC',
+    [camionId]
+  );
+  return result;
 }
 
 export async function deleteCamion(id: number): Promise<boolean> {
@@ -372,7 +362,7 @@ export async function getRutasWithStats(): Promise<RutaWithStats[]> {
                 'latitud', c.latitud,
                 'longitud', c.longitud,
                 'telefono', c.telefono,
-                'activo', c.activo
+                'estado', c.estado
               )
           END
         ) FILTER (WHERE c.id IS NOT NULL), '[]'::json
@@ -848,7 +838,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 // Exportar tipos para uso en componentes
 export type { 
   Cliente, CreateCliente, UpdateCliente, 
-  Camion, CamionWithStats, CreateCamion, UpdateCamion, 
+  Camion, CreateCamion, UpdateCamion, 
   Ruta, Reparto, RepartoWithDetails, CreateReparto, 
   DashboardStats, Departamento, CreateDepartamento, 
   Localidad, CreateLocalidad 

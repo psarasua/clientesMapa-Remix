@@ -8,6 +8,7 @@ import {
 } from "~/lib/database.server";
 import type { RutaWithStats, RutaOptimizada } from "~/types/database";
 import { PageLayout } from "~/components/ui/Layout";
+import { ErrorBoundary as CustomErrorBoundary } from "~/components/ui/ErrorBoundary";
 import { RutaTable } from "~/components/rutas/RutaTable";
 import { RutaOptimizadaView } from "~/components/rutas/RutaOptimizadaView";
 import { RutaMap } from "~/components/rutas/RutaMap";
@@ -216,4 +217,8 @@ export default function RutasPage() {
       <LeafletStyles />
     </PageLayout>
   );
+}
+
+export function ErrorBoundary() {
+  return <CustomErrorBoundary />;
 }

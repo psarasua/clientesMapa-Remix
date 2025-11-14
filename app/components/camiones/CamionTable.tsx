@@ -1,8 +1,8 @@
 import { Link } from "react-router";
-import type { CamionWithStats } from "~/lib/database.server";
+import type { Camion } from "~/types/database";
 
 interface CamionTableProps {
-  camiones: CamionWithStats[];
+  camiones: Camion[];
 }
 
 export function CamionTable({ camiones }: CamionTableProps) {
@@ -29,16 +29,10 @@ function CamionTableHeader() {
     <thead className="bg-gray-50">
       <tr>
         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          ID
+          Camión
         </th>
         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          Nombre/Conductor
-        </th>
-        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          Repartos
-        </th>
-        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          Estado
+          Nombre
         </th>
         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
           Acciones
@@ -49,42 +43,29 @@ function CamionTableHeader() {
 }
 
 interface CamionTableRowProps {
-  camion: CamionWithStats;
+  camion: Camion;
 }
 
 function CamionTableRow({ camion }: CamionTableRowProps) {
   return (
     <tr className="hover:bg-gray-50">
+      {/* Camión - Solo ID */}
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="text-sm font-medium text-gray-900">
-          #{camion.id}
+          {camion.id}
         </div>
       </td>
+      
+      {/* Nombre */}
       <td className="px-6 py-4 whitespace-nowrap">
-        <div>
-          <div className="text-sm font-medium text-gray-900">
-            {camion.nombre}
-          </div>
-          <div className="text-sm text-gray-500">
-            Conductor asignado
-          </div>
+        <div className="text-sm font-medium text-gray-900">
+          {camion.nombre}
         </div>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm text-gray-900">
-          Total: {camion.total_repartos || 0}
-        </div>
-        <div className="text-sm text-gray-500">
-          Activos: {camion.repartos_activos || 0}
-        </div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <CamionStatusBadge 
-          status={camion.repartos_activos && camion.repartos_activos > 0 ? "en_ruta" : "disponible"} 
-        />
-      </td>
+      
+      {/* Acciones */}
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-        <CamionActions camionId={camion.id} />
+        <CamionActions camionId={camion.id} nombre={camion.nombre} />
       </td>
     </tr>
   );
@@ -134,23 +115,45 @@ function CamionStatusBadge({ status }: CamionStatusBadgeProps) {
 
 interface CamionActionsProps {
   camionId: number;
+  nombre: string;
 }
 
-function CamionActions({ camionId }: CamionActionsProps) {
+function CamionActions({ camionId, nombre }: CamionActionsProps) {
   return (
-    <div className="flex justify-end gap-2">
+    <div className="flex justify-end gap-1">
       <Link
         to={`/camiones/${camionId}`}
-        className="text-blue-600 hover:text-blue-900 px-3 py-1 rounded-md hover:bg-blue-50"
+        className="text-blue-600 hover:text-blue-900 px-2 py-1 rounded-md hover:bg-blue-50 flex items-center"
+        title={`Ver detalles de ${nombre}`}
       >
-        Ver
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+        </svg>
       </Link>
       <Link
         to={`/camiones/${camionId}/editar`}
-        className="text-yellow-600 hover:text-yellow-900 px-3 py-1 rounded-md hover:bg-yellow-50"
+        className="text-yellow-600 hover:text-yellow-900 px-2 py-1 rounded-md hover:bg-yellow-50 flex items-center"
+        title={`Editar ${nombre}`}
       >
-        Editar
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+        </svg>
       </Link>
+      <button
+        onClick={() => {
+          if (confirm(`¿Estás seguro de que quieres eliminar el camión "${nombre}"?`)) {
+            // TODO: Implementar función de eliminar
+            alert('Función de eliminar en desarrollo');
+          }
+        }}
+        className="text-red-600 hover:text-red-900 px-2 py-1 rounded-md hover:bg-red-50 flex items-center"
+        title={`Eliminar ${nombre}`}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16"></path>
+        </svg>
+      </button>
     </div>
   );
 }
