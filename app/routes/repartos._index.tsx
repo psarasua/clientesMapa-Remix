@@ -1,10 +1,12 @@
-import type { LoaderFunctionArgs } from "react-router";
-import { useLoaderData, useSearchParams, useNavigate } from "react-router";
+import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
+import { useLoaderData, useSearchParams, useNavigate, useActionData } from "react-router";
+import React from "react";
 import { redirectIfNotAuthenticated } from "~/lib/auth.server";
 import { 
   getAllRepartos, 
   getAllCamiones,
-  getAllRutas 
+  getAllRutas,
+  deleteReparto 
 } from "~/lib/database.server";
 import type { Reparto } from "~/types/database";
 import { PageLayout, PageHeader } from "~/components/ui/Layout";
@@ -14,6 +16,7 @@ import { Button } from "~/components/ui/Button";
 import { RepartoTable } from "~/components/repartos/RepartoTable";
 import { RepartoFilters } from "~/components/repartos/RepartoFilters";
 import { Pagination } from "~/components/ui/Pagination";
+import { useToast } from "~/hooks/useToast";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await redirectIfNotAuthenticated(request);
@@ -94,10 +97,59 @@ export async function loader({ request }: LoaderFunctionArgs) {
   }
 }
 
+export async function action({ request }: ActionFunctionArgs) {
+  await redirectIfNotAuthenticated(request);
+  
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+  const repartoId = formData.get("repartoId");
+  
+  if (intent === "delete" && repartoId) {
+    try {
+      await deleteReparto(parseInt(repartoId.toString()));
+      return { success: "Reparto eliminado exitosamente" };
+    } catch (error) {
+      console.error("Error deleting reparto:", error);
+      return { error: "Error al eliminar el reparto" };
+    }
+  }
+  
+  return null;
+}
+
 export default function RepartosIndex() {
   const { repartos, camiones, rutas, pagination, filters } = useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { success, error } = useToast();
+  
+  // Hook para manejar notificaciones automáticamente
+  useToast();
+
+  // Manejar parámetros de URL para notificaciones
+  React.useEffect(() => {
+    if (searchParams.get('deleted') === 'true') {
+      success('Reparto eliminado exitosamente');
+      setSearchParams(prev => {
+        prev.delete('deleted');
+        return prev;
+      });
+    }
+    if (searchParams.get('updated') === 'true') {
+      success('Reparto actualizado exitosamente');
+      setSearchParams(prev => {
+        prev.delete('updated');
+        return prev;
+      });
+    }
+    if (searchParams.get('error') === 'delete') {
+      error('Error al eliminar el reparto');
+      setSearchParams(prev => {
+        prev.delete('error');
+        return prev;
+      });
+    }
+  }, [searchParams, success, error, setSearchParams]);
 
   const handleSearch = (value: string) => {
     const params = new URLSearchParams(searchParams);

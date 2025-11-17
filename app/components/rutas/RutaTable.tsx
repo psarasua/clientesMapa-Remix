@@ -1,5 +1,7 @@
-import { Link } from "react-router";
+import { Link, Form } from "react-router";
 import type { Ruta } from "~/types/database";
+import { useState } from "react";
+import toast from "react-hot-toast";
 
 interface RutaTableProps {
   rutas: Ruta[];
@@ -73,21 +75,88 @@ interface RutaActionsProps {
 }
 
 function RutaActions({ rutaId }: RutaActionsProps) {
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const handleDelete = () => {
+    toast.promise(
+      fetch(`/rutas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          intent: 'delete',
+          rutaId: rutaId.toString()
+        })
+      }),
+      {
+        loading: 'Eliminando ruta...',
+        success: 'Ruta eliminada exitosamente',
+        error: 'Error al eliminar la ruta'
+      }
+    ).then(() => {
+      // Recargar la página para actualizar la lista
+      window.location.reload();
+    });
+    setShowDeleteModal(false);
+  };
+
   return (
-    <div className="flex justify-end gap-2">
-      <Link
-        to={`/rutas/${rutaId}`}
-        className="text-blue-600 hover:text-blue-900 px-3 py-1 rounded-md hover:bg-blue-50"
-      >
-        Ver
-      </Link>
-      <Link
-        to={`/rutas/${rutaId}/editar`}
-        className="text-yellow-600 hover:text-yellow-900 px-3 py-1 rounded-md hover:bg-yellow-50"
-      >
-        Editar
-      </Link>
-    </div>
+    <>
+      <div className="flex justify-end gap-2">
+        <Link
+          to={`/rutas/${rutaId}`}
+          className="text-blue-600 hover:text-blue-900 px-3 py-1 rounded-md hover:bg-blue-50"
+        >
+          Ver
+        </Link>
+        <Link
+          to={`/rutas/${rutaId}/editar`}
+          className="text-yellow-600 hover:text-yellow-900 px-3 py-1 rounded-md hover:bg-yellow-50"
+        >
+          Editar
+        </Link>
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          className="text-red-600 hover:text-red-900 px-3 py-1 rounded-md hover:bg-red-50"
+        >
+          Eliminar
+        </button>
+      </div>
+
+      {/* Modal de confirmación */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-sm w-full p-6">
+            <div className="flex items-center mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                <span className="text-xl">⚠️</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Confirmar Eliminación</h3>
+              </div>
+            </div>
+            
+            <p className="text-gray-700 mb-6">
+              ¿Estás seguro de que quieres eliminar la ruta <strong>#{rutaId}</strong>?
+            </p>
+            
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+              >
+                🗑️ Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
