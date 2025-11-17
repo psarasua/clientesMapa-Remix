@@ -1,8 +1,8 @@
 import { Link } from "react-router";
-import type { RepartoWithDetails } from "~/lib/database.server";
+import type { Reparto } from "~/types/database";
 
 interface RepartoTableProps {
-  repartos: RepartoWithDetails[];
+  repartos: Reparto[];
 }
 
 export function RepartoTable({ repartos }: RepartoTableProps) {
@@ -29,19 +29,13 @@ function RepartoTableHeader() {
     <thead className="bg-gray-50">
       <tr>
         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          ID
+          Reparto ID
         </th>
         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
           Camión
         </th>
         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
           Ruta
-        </th>
-        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          Clientes
-        </th>
-        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          Estado
         </th>
         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
           Acciones
@@ -52,13 +46,10 @@ function RepartoTableHeader() {
 }
 
 interface RepartoTableRowProps {
-  reparto: RepartoWithDetails;
+  reparto: Reparto;
 }
 
 function RepartoTableRow({ reparto }: RepartoTableRowProps) {
-  const clienteCount = reparto.clientes?.length || 0;
-  const estadoReparto = clienteCount === 0 ? 'sin_clientes' : 'planificado';
-
   return (
     <tr className="hover:bg-gray-50">
       <td className="px-6 py-4 whitespace-nowrap">
@@ -67,83 +58,25 @@ function RepartoTableRow({ reparto }: RepartoTableRowProps) {
         </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
-        <div>
-          <div className="text-sm font-medium text-gray-900">
-            {reparto.camion?.nombre || "Sin asignar"}
-          </div>
-          <div className="text-sm text-gray-500">
-            {reparto.camion ? `ID: ${reparto.camion.id}` : "Sin camión"}
-          </div>
+        <div className="text-sm text-gray-900">
+          {reparto.camion_nombre || "Sin asignar"}
+        </div>
+        <div className="text-sm text-gray-500">
+          ID: {reparto.camion_id || "N/A"}
         </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="text-sm text-gray-900">
-          {reparto.ruta?.nombre || "Sin ruta"}
+          {reparto.ruta_nombre || "Sin ruta"}
         </div>
         <div className="text-sm text-gray-500">
-          {reparto.ruta ? `ID: ${reparto.ruta.id}` : "No asignada"}
+          ID: {reparto.ruta_id || "N/A"}
         </div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm text-gray-900">
-          {clienteCount} cliente{clienteCount !== 1 ? 's' : ''}
-        </div>
-        <div className="text-sm text-gray-500">
-          {clienteCount > 0 
-            ? reparto.clientes?.slice(0, 2).map(c => c.nombre).join(', ') + (clienteCount > 2 ? '...' : '')
-            : "Sin clientes"
-          }
-        </div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <RepartoStatusBadge status={estadoReparto} />
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
         <RepartoActions repartoId={reparto.id} />
       </td>
     </tr>
-  );
-}
-
-interface RepartoStatusBadgeProps {
-  status: string;
-}
-
-function RepartoStatusBadge({ status }: RepartoStatusBadgeProps) {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "planificado":
-        return "bg-blue-100 text-blue-800";
-      case "en_curso":
-        return "bg-yellow-100 text-yellow-800";
-      case "completado":
-        return "bg-green-100 text-green-800";
-      case "sin_clientes":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "planificado":
-        return "Planificado";
-      case "en_curso":
-        return "En Curso";
-      case "completado":
-        return "Completado";
-      case "sin_clientes":
-        return "Sin Clientes";
-      default:
-        return "Desconocido";
-    }
-  };
-
-  return (
-    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(status)}`}>
-      {getStatusLabel(status)}
-    </span>
   );
 }
 

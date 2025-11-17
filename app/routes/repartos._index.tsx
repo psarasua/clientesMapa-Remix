@@ -2,11 +2,11 @@ import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData, useSearchParams, useNavigate } from "react-router";
 import { redirectIfNotAuthenticated } from "~/lib/auth.server";
 import { 
-  getRepartosWithDetails, 
+  getAllRepartos, 
   getAllCamiones,
-  getAllRutas,
-  type RepartoWithDetails 
+  getAllRutas 
 } from "~/lib/database.server";
+import type { Reparto } from "~/types/database";
 import { PageLayout, PageHeader } from "~/components/ui/Layout";
 import { ErrorBoundary as CustomErrorBoundary } from "~/components/ui/ErrorBoundary";
 import { Card } from "~/components/ui/Card";
@@ -27,36 +27,26 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const offset = (page - 1) * limit;
   
   try {
-    // Obtener datos para filtros
+    // Preparar filtros para la consulta
+    const filters = {
+      camion_id: camionId ? parseInt(camionId) : undefined,
+      ruta_id: rutaId ? parseInt(rutaId) : undefined
+    };
+
+    // Obtener datos
     const [repartos, camiones, rutas] = await Promise.all([
-      getRepartosWithDetails(),
+      getAllRepartos(filters),
       getAllCamiones(),
       getAllRutas()
     ]);
     
-    // Aplicar filtros
+    // Aplicar filtro de búsqueda por texto
     let filteredRepartos = repartos;
-    
-    // Filtro por búsqueda (ID, camión, ruta)
     if (search) {
       filteredRepartos = filteredRepartos.filter(reparto => 
         reparto.id.toString().includes(search) ||
-        reparto.camion?.nombre.toLowerCase().includes(search.toLowerCase()) ||
-        reparto.ruta?.nombre.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-    
-    // Filtro por camión
-    if (camionId) {
-      filteredRepartos = filteredRepartos.filter(reparto => 
-        reparto.camion_id?.toString() === camionId
-      );
-    }
-    
-    // Filtro por ruta
-    if (rutaId) {
-      filteredRepartos = filteredRepartos.filter(reparto => 
-        reparto.ruta_id?.toString() === rutaId
+        reparto.camion_nombre?.toLowerCase().includes(search.toLowerCase()) ||
+        reparto.ruta_nombre?.toLowerCase().includes(search.toLowerCase())
       );
     }
     

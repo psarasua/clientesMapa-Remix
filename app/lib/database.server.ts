@@ -48,7 +48,6 @@ export function getDbPool(): Pool {
       min: 2,  // Mantenemos algunas conexiones mínimas
       idleTimeoutMillis: 60000, // 1 minuto para conexiones idle
       connectionTimeoutMillis: 30000, // 30 segundos para conectar
-      acquireTimeoutMillis: 30000, // 30 segundos para obtener conexión del pool
       statement_timeout: 60000, // 60 segundos timeout para statements
       query_timeout: 60000, // 60 segundos timeout para queries
       keepAlive: true,
@@ -320,196 +319,15 @@ export async function deleteRuta(id: number): Promise<boolean> {
 }
 
 // =====================================
-// RUTAS OPTIMIZADAS
+// RUTAS - FUNCIONES DEPRECATED
 // =====================================
+// Las funciones de optimización fueron removidas por usar campos JSON complejos
+// que causaban errores en PostgreSQL. Ahora solo mostramos datos básicos de BD.
 
-export interface RutaWithStats extends Ruta {
-  total_clientes: number;
-  total_repartos: number;
-  clientes_asignados: Cliente[];
-  distancia_promedio?: number;
-  zona_geografica?: string;
-}
+// FUNCIÓN DEPRECADA: getRutasWithStats() - causaba errores con campos JSON
 
-export interface RutaOptimizada extends RutaWithStats {
-  clientes_optimizados: ClienteOptimizado[];
-  distancia_total: number;
-  tiempo_estimado: number;
-}
-
-export interface ClienteOptimizado extends Cliente {
-  orden_visita: number;
-  distancia_anterior: number;
-  tiempo_estimado: number;
-}
-
-// Obtener rutas con estadísticas completas
-export async function getRutasWithStats(): Promise<RutaWithStats[]> {
-  const result = await query<any>(`
-    SELECT 
-      r.id,
-      r.nombre,
-      COUNT(DISTINCT c.id) as total_clientes,
-      COUNT(DISTINCT rep.id) as total_repartos,
-      COALESCE(
-        JSON_AGG(
-          DISTINCT CASE 
-            WHEN c.id IS NOT NULL THEN 
-              JSON_BUILD_OBJECT(
-                'id', c.id,
-                'nombre', c.nombre,
-                'direccion', c.direccion,
-                'latitud', c.latitud,
-                'longitud', c.longitud,
-                'telefono', c.telefono,
-                'estado', c.estado
-              )
-          END
-        ) FILTER (WHERE c.id IS NOT NULL), '[]'::json
-      ) as clientes_asignados
-    FROM rutas r
-    LEFT JOIN repartos rep ON r.id = rep.ruta_id
-    LEFT JOIN reparto_cliente rc ON rep.id = rc.reparto_id
-    LEFT JOIN clientes c ON rc.cliente_id = c.id
-    GROUP BY r.id, r.nombre
-    ORDER BY r.nombre ASC
-  `);
-
-  return result.map(row => ({
-    ...row,
-    clientes_asignados: Array.isArray(row.clientes_asignados) ? row.clientes_asignados : []
-  }));
-}
-
-// Calcular distancia entre dos puntos usando fórmula de Haversine
-function calcularDistancia(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Radio de la Tierra en km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-}
-
-// Optimizar ruta usando algoritmo del vecino más cercano
-export async function optimizarRuta(rutaId: number, puntoInicio?: {lat: number, lon: number}): Promise<RutaOptimizada | null> {
-  const rutaBase = await getRutaById(rutaId);
-  if (!rutaBase) return null;
-
-  const rutaStats = await getRutasWithStats();
-  const ruta = rutaStats.find(r => r.id === rutaId);
-  if (!ruta) return null;
-
-  const clientes = ruta.clientes_asignados.filter(c => c.latitud && c.longitud);
-  if (clientes.length === 0) {
-    return {
-      ...ruta,
-      clientes_optimizados: [],
-      distancia_total: 0,
-      tiempo_estimado: 0
-    };
-  }
-
-  // Punto de inicio (centro de distribución o primer cliente)
-  const inicio = puntoInicio || {
-    lat: clientes.reduce((sum, c) => sum + c.latitud!, 0) / clientes.length,
-    lon: clientes.reduce((sum, c) => sum + c.longitud!, 0) / clientes.length
-  };
-
-  // Algoritmo del vecino más cercano
-  const clientesOptimizados: ClienteOptimizado[] = [];
-  const clientesPendientes = [...clientes];
-  let posicionActual = inicio;
-  let distanciaTotal = 0;
-
-  for (let orden = 1; orden <= clientes.length; orden++) {
-    let clienteMasCercano = clientesPendientes[0];
-    let distanciaMinima = calcularDistancia(
-      posicionActual.lat, posicionActual.lon,
-      clienteMasCercano.latitud!, clienteMasCercano.longitud!
-    );
-
-    // Encontrar el cliente más cercano
-    for (const cliente of clientesPendientes) {
-      const distancia = calcularDistancia(
-        posicionActual.lat, posicionActual.lon,
-        cliente.latitud!, cliente.longitud!
-      );
-      
-      if (distancia < distanciaMinima) {
-        distanciaMinima = distancia;
-        clienteMasCercano = cliente;
-      }
-    }
-
-    // Agregar cliente optimizado
-    clientesOptimizados.push({
-      ...clienteMasCercano,
-      orden_visita: orden,
-      distancia_anterior: distanciaMinima,
-      tiempo_estimado: distanciaMinima * 2 + 15 // 2 min/km + 15 min por visita
-    });
-
-    // Actualizar posición y totales
-    posicionActual = {
-      lat: clienteMasCercano.latitud!,
-      lon: clienteMasCercano.longitud!
-    };
-    distanciaTotal += distanciaMinima;
-    
-    // Remover cliente de pendientes
-    const index = clientesPendientes.indexOf(clienteMasCercano);
-    clientesPendientes.splice(index, 1);
-  }
-
-  const tiempoTotal = clientesOptimizados.reduce((sum, c) => sum + c.tiempo_estimado, 0);
-
-  return {
-    ...ruta,
-    clientes_optimizados: clientesOptimizados,
-    distancia_total: Math.round(distanciaTotal * 100) / 100,
-    tiempo_estimado: Math.round(tiempoTotal)
-  };
-}
-
-// Asignar clientes automáticamente por zona geográfica
-export async function asignarClientesPorZona(): Promise<{mensaje: string, asignaciones: any[]}> {
-  const rutas = await getAllRutas();
-  const clientes = await getAllClientes();
-  const asignaciones: any[] = [];
-
-  // Definir zonas geográficas basadas en coordenadas
-  const zonas = [
-    { rutaId: 1, nombre: 'Norte', latMin: -34.5, latMax: -34.55, lonMin: -58.5, lonMax: -58.4 },
-    { rutaId: 2, nombre: 'Sur', latMin: -34.65, latMax: -34.7, lonMin: -58.5, lonMax: -58.4 },
-    { rutaId: 3, nombre: 'Centro', latMin: -34.55, latMax: -34.65, lonMin: -58.5, lonMax: -58.4 }
-  ];
-
-  for (const cliente of clientes) {
-    if (!cliente.latitud || !cliente.longitud) continue;
-
-    const zonaAsignada = zonas.find(zona => 
-      cliente.latitud! >= zona.latMin && cliente.latitud! <= zona.latMax &&
-      cliente.longitud! >= zona.lonMin && cliente.longitud! <= zona.lonMax
-    );
-
-    if (zonaAsignada) {
-      asignaciones.push({
-        cliente: cliente.nombre,
-        ruta: zonaAsignada.nombre,
-        coordenadas: `${cliente.latitud}, ${cliente.longitud}`
-      });
-    }
-  }
-
-  return {
-    mensaje: `Se procesaron ${asignaciones.length} asignaciones automáticas`,
-    asignaciones
-  };
-}
+// FUNCIONES DEPRECATED: optimización y asignación automática eliminadas
+// por usar tipos complejos que causaban errores en PostgreSQL
 
 // =====================================
 // CRUD para REPARTOS
@@ -522,20 +340,28 @@ export async function getAllRepartos(filters?: RepartoFilters): Promise<Reparto[
 
   if (filters?.camion_id) {
     paramCount++;
-    whereClause += ` AND camion_id = $${paramCount}`;
+    whereClause += ` AND r.camion_id = $${paramCount}`;
     params.push(filters.camion_id);
   }
 
   if (filters?.ruta_id) {
     paramCount++;
-    whereClause += ` AND ruta_id = $${paramCount}`;
+    whereClause += ` AND r.ruta_id = $${paramCount}`;
     params.push(filters.ruta_id);
   }
 
   const queryText = `
-    SELECT * FROM repartos 
+    SELECT 
+      r.id,
+      r.camion_id,
+      r.ruta_id,
+      c.nombre as camion_nombre,
+      rt.nombre as ruta_nombre
+    FROM repartos r
+    LEFT JOIN camiones c ON r.camion_id = c.id
+    LEFT JOIN rutas rt ON r.ruta_id = rt.id
     ${whereClause}
-    ORDER BY id DESC
+    ORDER BY r.id DESC
   `;
 
   return await query<Reparto>(queryText, params);
@@ -609,32 +435,8 @@ export async function removeClienteFromReparto(repartoId: number, clienteId: num
   );
 }
 
-// Función para obtener repartos con detalles completos
-export async function getRepartosWithDetails(): Promise<RepartoWithDetails[]> {
-  const repartos = await getAllRepartos();
-  
-  const repartosWithDetails: RepartoWithDetails[] = [];
-  
-  for (const reparto of repartos) {
-    // Obtener camión
-    const camion = reparto.camion_id ? await getCamionById(reparto.camion_id) : null;
-    
-    // Obtener ruta
-    const ruta = reparto.ruta_id ? await getRutaById(reparto.ruta_id) : null;
-    
-    // Obtener clientes
-    const clientes = await getClientesByRepartoId(reparto.id);
-    
-    repartosWithDetails.push({
-      ...reparto,
-      camion,
-      ruta,
-      clientes
-    });
-  }
-  
-  return repartosWithDetails;
-}
+// FUNCIÓN DEPRECADA: getRepartosWithDetails() 
+// Ahora getAllRepartos() incluye los joins directamente
 
 // Función para obtener reparto con detalles por ID
 export async function getRepartoWithDetailsById(id: number): Promise<RepartoWithDetails | null> {

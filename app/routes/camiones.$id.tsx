@@ -46,8 +46,8 @@ export default function CamionDetalle() {
   const { camion, repartos } = useLoaderData<LoaderData>();
   const navigate = useNavigate();
 
-  const repartosActivos = repartos.filter(r => r.estado === 'pendiente' || r.estado === 'en_progreso');
-  const repartosCompletados = repartos.filter(r => r.estado === 'completado');
+  // Mostrar todos los repartos asignados al camión
+  const totalRepartos = repartos.length;
 
   return (
     <PageLayout>
@@ -108,23 +108,16 @@ export default function CamionDetalle() {
                 <span className="text-gray-600">Total Repartos:</span>
                 <span className="font-semibold text-gray-900">{repartos.length}</span>
               </div>
-              <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                <span className="text-gray-600">Completados:</span>
-                <span className="font-semibold text-green-700">{repartosCompletados.length}</span>
-              </div>
-              <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
-                <span className="text-gray-600">Activos:</span>
-                <span className="font-semibold text-orange-700">{repartosActivos.length}</span>
-              </div>
+
             </div>
 
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                repartosActivos.length > 0 
-                  ? 'bg-orange-100 text-orange-800' 
-                  : 'bg-green-100 text-green-800'
+                totalRepartos > 0 
+                  ? 'bg-blue-100 text-blue-800' 
+                  : 'bg-gray-100 text-gray-800'
               }`}>
-                {repartosActivos.length > 0 ? '🚛 En Ruta' : '✅ Disponible'}
+                {totalRepartos > 0 ? `${totalRepartos} repartos` : '✅ Sin repartos'}
               </div>
             </div>
           </Card>
@@ -168,24 +161,12 @@ export default function CamionDetalle() {
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
-                          <span className="text-sm text-gray-500">#{reparto.id}</span>
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            reparto.estado === 'completado' ? 'bg-green-100 text-green-800' :
-                            reparto.estado === 'en_progreso' ? 'bg-orange-100 text-orange-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {reparto.estado}
-                          </span>
+                          <span className="text-sm text-gray-500">Reparto #{reparto.id}</span>
                         </div>
                         <div className="mt-1">
                           <p className="text-sm text-gray-600">
-                            Ruta: {reparto.ruta_id ? `#${reparto.ruta_id}` : 'Sin asignar'}
+                            Ruta: {reparto.ruta_nombre || 'Sin asignar'} {reparto.ruta_id ? `(#${reparto.ruta_id})` : ''}
                           </p>
-                          {reparto.fecha_programada && (
-                            <p className="text-sm text-gray-500">
-                              📅 {new Date(reparto.fecha_programada).toLocaleDateString()}
-                            </p>
-                          )}
                         </div>
                       </div>
                       <div className="flex gap-2">
