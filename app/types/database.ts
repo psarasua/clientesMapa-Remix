@@ -159,6 +159,7 @@ export interface Reparto {
   ruta_id: number | null;
   camion_nombre?: string | null;
   ruta_nombre?: string | null;
+  total_clientes?: number;
 }
 
 // DTO para crear reparto

@@ -5,7 +5,11 @@ import {
   getRepartoById, 
   updateReparto, 
   getAllCamiones, 
-  getAllRutas 
+  getAllRutas,
+  getAllClientes,
+  getClientesByRepartoId,
+  addClienteToReparto,
+  removeClienteFromReparto
 } from "~/lib/database.server";
 import type { Reparto, Camion, Ruta } from "~/types/database";
 import { PageLayout, PageHeader } from "~/components/ui/Layout";
@@ -13,7 +17,9 @@ import { ErrorBoundary as CustomErrorBoundary } from "~/components/ui/ErrorBound
 import { Card } from "~/components/ui/Card";
 import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
-import { useToast } from "~/hooks/useToast";
+import { ClienteManager } from "~/components/repartos/ClienteManager";
+import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   await redirectIfNotAuthenticated(request);
@@ -24,20 +30,29 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   }
 
   try {
-    const [reparto, camiones, rutas] = await Promise.all([
+    const [reparto, camiones, rutas, todosLosClientes, clientesDelReparto] = await Promise.all([
       getRepartoById(id),
       getAllCamiones(),
-      getAllRutas()
+      getAllRutas(),
+      getAllClientes(),
+      getClientesByRepartoId(id)
     ]);
 
     if (!reparto) {
       throw new Response("Reparto no encontrado", { status: 404 });
     }
 
-    return { reparto, camiones, rutas };
+    return { 
+      reparto, 
+      camiones, 
+      rutas, 
+      clientes: todosLosClientes,
+      clientesActuales: clientesDelReparto.map(c => c.id),
+      clientesAsignados: clientesDelReparto
+    };
   } catch (error) {
-    console.error("Error loading reparto:", error);
-    throw new Response("Error interno del servidor", { status: 500 });
+    console.error('Error updating reparto:', error);
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
 
@@ -51,27 +66,72 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const rutaId = formData.get("ruta_id");
   
   try {
+    // Actualizar datos básicos del reparto
     const updateData = {
       camion_id: camionId ? parseInt(camionId.toString()) : null,
       ruta_id: rutaId ? parseInt(rutaId.toString()) : null
     };
 
     await updateReparto(id, updateData);
-    return redirect(`/repartos/${id}?updated=true`);
+
+    // Obtener clientes seleccionados del formulario
+    const clientesData = formData.get("clientes");
+    let clientesSeleccionados: number[] = [];
+    
+    if (clientesData) {
+      try {
+        clientesSeleccionados = JSON.parse(clientesData.toString());
+      } catch (error) {
+        console.error('Error parsing clientes data:', error);
+      }
+    }
+
+    // Obtener clientes actuales del reparto
+    const clientesActuales = await getClientesByRepartoId(id);
+    const clientesActualesIds = clientesActuales.map(c => c.id);
+
+    // Agregar nuevos clientes
+    const clientesAAgregar = clientesSeleccionados.filter(id => !clientesActualesIds.includes(id));
+    for (const clienteId of clientesAAgregar) {
+      await addClienteToReparto({ reparto_id: id, cliente_id: clienteId });
+    }
+
+    // Remover clientes no seleccionados
+    const clientesARemover = clientesActualesIds.filter(id => !clientesSeleccionados.includes(id));
+    for (const clienteId of clientesARemover) {
+      await removeClienteFromReparto(id, clienteId);
+    }
+
+    return redirect('/repartos?updated=true');
   } catch (error) {
     console.error("Error updating reparto:", error);
-    return { error: "Error al actualizar el reparto. Inténtalo de nuevo." };
+    return { error: "Error al actualizar el reparto" };
   }
 }
 
 export default function EditarReparto() {
-  const { reparto, camiones, rutas } = useLoaderData<typeof loader>();
+  const { reparto, camiones, rutas, clientes, clientesActuales, clientesAsignados } = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
   const navigate = useNavigate();
-  
-  // Hook para manejar notificaciones automáticamente
-  useToast();
+  const [selectedClientes, setSelectedClientes] = useState<number[]>(clientesActuales);
 
-  return (
+  // Sincronizar estado cuando cambie el loader data
+  useEffect(() => {
+    setSelectedClientes(clientesActuales);
+  }, [clientesActuales]);
+
+  const handleClienteToggle = (clienteId: number) => {
+    setSelectedClientes(prev => 
+      prev.includes(clienteId) 
+        ? prev.filter(id => id !== clienteId)
+        : [...prev, clienteId]
+    );
+  };
+
+  // Mostrar error si existe
+  if (actionData?.error) {
+    toast.error(actionData.error);
+  }  return (
     <PageLayout>
       <PageHeader
         title={`Editar Reparto #${reparto.id}`}
@@ -130,6 +190,19 @@ export default function EditarReparto() {
             </div>
           </div>
 
+          {/* Selección de Clientes */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Gestión de Clientes
+            </label>
+            <ClienteManager 
+              clientes={clientes}
+              clientesAsignados={clientesAsignados}
+              selectedClientes={selectedClientes}
+              onClienteToggle={handleClienteToggle}
+            />
+          </div>
+
           {/* Información actual */}
           <div className="border-t border-gray-200 pt-6">
             <div className="bg-gray-50 rounded-lg p-4">
@@ -158,7 +231,7 @@ export default function EditarReparto() {
             <Button 
               type="button" 
               variant="secondary" 
-              onClick={() => navigate(`/repartos/${reparto.id}`)}
+              onClick={() => navigate('/repartos')}
             >
               Cancelar
             </Button>

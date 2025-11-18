@@ -39,6 +39,9 @@ function RepartoTableHeader() {
         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
           Ruta
         </th>
+        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+          Total Clientes
+        </th>
         <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
           Acciones
         </th>
@@ -73,6 +76,11 @@ function RepartoTableRow({ reparto }: RepartoTableRowProps) {
         </div>
         <div className="text-sm text-gray-500">
           ID: {reparto.ruta_id || "N/A"}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-center">
+        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          {reparto.total_clientes || 0} cliente{(reparto.total_clientes || 0) !== 1 ? 's' : ''}
         </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -169,14 +177,15 @@ function RepartoActions({ repartoId }: RepartoActionsProps) {
   return (
     <div className="flex justify-end gap-2">
       <Link
-        to={`/repartos/${repartoId}`}
-        className="text-blue-600 hover:text-blue-900 px-3 py-1 rounded-md hover:bg-blue-50"
+        to={`/repartos/${repartoId}/mapa`}
+        className="text-green-600 hover:text-green-900 px-3 py-1 rounded-md hover:bg-green-50"
+        title="Ver ubicaciones en mapa"
       >
-        Ver
+        🗺️ Mapa
       </Link>
       <Link
         to={`/repartos/${repartoId}/editar`}
-        className="text-yellow-600 hover:text-yellow-900 px-3 py-1 rounded-md hover:bg-yellow-50"
+        className="text-blue-600 hover:text-blue-900 px-3 py-1 rounded-md hover:bg-blue-50"
       >
         Editar
       </Link>

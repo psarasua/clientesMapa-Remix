@@ -18,6 +18,7 @@ export { CamionFilters } from "./camiones/CamionFilters";
 // Reparto Components
 export { RepartoTable } from "./repartos/RepartoTable";
 export { RepartoFilters } from "./repartos/RepartoFilters";
+export { ClienteSelector } from "./repartos/ClienteSelector";
 
 // Ruta Components
 export { RutaTable } from "./rutas/RutaTable";

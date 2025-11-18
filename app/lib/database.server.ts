@@ -356,11 +356,14 @@ export async function getAllRepartos(filters?: RepartoFilters): Promise<Reparto[
       r.camion_id,
       r.ruta_id,
       c.nombre as camion_nombre,
-      rt.nombre as ruta_nombre
+      rt.nombre as ruta_nombre,
+      COALESCE(COUNT(rc.cliente_id), 0) as total_clientes
     FROM repartos r
     LEFT JOIN camiones c ON r.camion_id = c.id
     LEFT JOIN rutas rt ON r.ruta_id = rt.id
+    LEFT JOIN reparto_cliente rc ON r.id = rc.reparto_id
     ${whereClause}
+    GROUP BY r.id, r.camion_id, r.ruta_id, c.nombre, rt.nombre
     ORDER BY r.id DESC
   `;
 
@@ -368,7 +371,22 @@ export async function getAllRepartos(filters?: RepartoFilters): Promise<Reparto[
 }
 
 export async function getRepartoById(id: number): Promise<Reparto | null> {
-  const result = await query<Reparto>('SELECT * FROM repartos WHERE id = $1', [id]);
+  const queryText = `
+    SELECT 
+      r.id,
+      r.camion_id,
+      r.ruta_id,
+      c.nombre as camion_nombre,
+      rt.nombre as ruta_nombre,
+      COALESCE(COUNT(rc.cliente_id), 0) as total_clientes
+    FROM repartos r
+    LEFT JOIN camiones c ON r.camion_id = c.id
+    LEFT JOIN rutas rt ON r.ruta_id = rt.id
+    LEFT JOIN reparto_cliente rc ON r.id = rc.reparto_id
+    WHERE r.id = $1
+    GROUP BY r.id, r.camion_id, r.ruta_id, c.nombre, rt.nombre
+  `;
+  const result = await query<Reparto>(queryText, [id]);
   return result[0] || null;
 }
 

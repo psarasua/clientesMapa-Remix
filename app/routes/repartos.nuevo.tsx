@@ -1,6 +1,8 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Form, Link, redirect, useActionData, useLoaderData, useNavigation } from "react-router";
 import { redirectIfNotAuthenticated } from "~/lib/auth.server";
+import { ClienteSelector } from "~/components/repartos/ClienteSelector";
+import { useState } from "react";
 import { 
   createRepartoWithClientes, 
   getAllCamiones,
@@ -80,6 +82,15 @@ export default function NuevoReparto() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  const [selectedClientes, setSelectedClientes] = useState<number[]>([]);
+
+  const handleClienteToggle = (clienteId: number) => {
+    setSelectedClientes(prev => 
+      prev.includes(clienteId) 
+        ? prev.filter(id => id !== clienteId)
+        : [...prev, clienteId]
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -168,30 +179,21 @@ export default function NuevoReparto() {
                 Selecciona los clientes que formarán parte de este reparto
               </p>
               
-              <div className="border border-gray-200 rounded-md max-h-96 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-1">
-                  {clientes.map((cliente) => (
-                    <label
-                      key={cliente.id}
-                      className="flex items-center p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100"
-                    >
-                      <input
-                        type="checkbox"
-                        name={`cliente_${cliente.id}`}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mr-3"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-gray-900 truncate">
-                          {cliente.nombre}
-                        </div>
-                        <div className="text-sm text-gray-500 truncate">
-                          {cliente.direccion}
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
+              <ClienteSelector
+                clientes={clientes}
+                selectedClientes={selectedClientes}
+                onClienteToggle={handleClienteToggle}
+              />
+              
+              {/* Campos ocultos para el formulario */}
+              {selectedClientes.map(clienteId => (
+                <input
+                  key={clienteId}
+                  type="hidden"
+                  name={`cliente_${clienteId}`}
+                  value="on"
+                />
+              ))}
               
               {clientes.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
@@ -213,8 +215,9 @@ export default function NuevoReparto() {
               </Link>
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || selectedClientes.length === 0}
                 className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                title={selectedClientes.length === 0 ? "Debe seleccionar al menos un cliente" : ""}
               >
                 {isSubmitting && (
                   <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
