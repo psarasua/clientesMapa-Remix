@@ -19,7 +19,8 @@ import { Button } from "~/components/ui/Button";
 import { Input } from "~/components/ui/Input";
 import { ClienteManager } from "~/components/repartos/ClienteManager";
 import { useState, useEffect } from "react";
-import toast from "react-hot-toast";
+import { LoadingSpinner } from "~/components/ui/Loading";
+import { useToast } from "~/hooks/useToast";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   await redirectIfNotAuthenticated(request);
@@ -114,6 +115,8 @@ export default function EditarReparto() {
   const actionData = useActionData<typeof action>();
   const navigate = useNavigate();
   const [selectedClientes, setSelectedClientes] = useState<number[]>(clientesActuales);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { success, error } = useToast();
 
   // Sincronizar estado cuando cambie el loader data
   useEffect(() => {
@@ -128,10 +131,14 @@ export default function EditarReparto() {
     );
   };
 
-  // Mostrar error si existe
-  if (actionData?.error) {
-    toast.error(actionData.error);
-  }  return (
+  // Mostrar notificaciones si existen
+  useEffect(() => {
+    if (actionData?.error) {
+      error(actionData.error);
+    }
+  }, [actionData, error]);
+
+  return (
     <PageLayout>
       <PageHeader
         title={`Editar Reparto #${reparto.id}`}
@@ -147,7 +154,10 @@ export default function EditarReparto() {
       />
 
       <Card>
-        <Form method="post" className="space-y-6">
+        <Form 
+          method="post" 
+          className="space-y-6"
+          onSubmit={() => setIsSubmitting(true)}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Selección de Camión */}
             <div>
@@ -235,7 +245,12 @@ export default function EditarReparto() {
             >
               Cancelar
             </Button>
-            <Button type="submit">
+            <Button 
+              type="submit"
+              disabled={isSubmitting}
+              className="flex items-center gap-2"
+            >
+              {isSubmitting && <LoadingSpinner size="sm" color="text-white" />}
               💾 Guardar Cambios
             </Button>
           </div>

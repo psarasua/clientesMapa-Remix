@@ -13,6 +13,9 @@ import type { Route } from "./+types/root";
 import { getUserFromRequest } from "~/lib/auth.server";
 import type { SessionUser } from "~/types/database";
 import { ErrorBoundary as CustomErrorBoundary } from "~/components/ui/ErrorBoundary";
+import { LoadingProvider } from "~/contexts/LoadingContext";
+import { LoadingOverlay } from "~/components/ui/Loading";
+import { useNavigationLoading } from "~/hooks/useNavigationLoading";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [
@@ -78,13 +81,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function App() {
+function AppContent() {
   const { user } = useLoaderData<{ user: SessionUser | null }>();
+  const { isLoading, loadingMessage } = useNavigationLoading();
   
   return (
     <div className="min-h-screen">
+      <LoadingOverlay isVisible={isLoading} message={loadingMessage} />
       <Outlet context={{ user }} />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <LoadingProvider>
+      <AppContent />
+    </LoadingProvider>
   );
 }
 

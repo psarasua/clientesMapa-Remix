@@ -2,6 +2,7 @@ import { Link, Form } from "react-router";
 import type { Reparto } from "~/types/database";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { LoadingSpinner } from "~/components/ui/Loading";
 
 interface RepartoTableProps {
   repartos: Reparto[];
@@ -95,6 +96,8 @@ interface RepartoActionsProps {
 }
 
 function RepartoActions({ repartoId }: RepartoActionsProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   const handleDelete = async () => {
     const confirmed = await new Promise<boolean>((resolve) => {
       toast.custom((t) => (
@@ -140,6 +143,8 @@ function RepartoActions({ repartoId }: RepartoActionsProps) {
     });
 
     if (confirmed) {
+      setIsDeleting(true);
+      
       // Crear un formulario y enviarlo
       const form = document.createElement('form');
       form.method = 'POST';
@@ -191,8 +196,10 @@ function RepartoActions({ repartoId }: RepartoActionsProps) {
       </Link>
       <button
         onClick={handleDelete}
-        className="text-red-600 hover:text-red-900 px-3 py-1 rounded-md hover:bg-red-50"
+        disabled={isDeleting}
+        className="text-red-600 hover:text-red-900 px-3 py-1 rounded-md hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
       >
+        {isDeleting && <LoadingSpinner size="sm" color="text-red-600" />}
         Eliminar
       </button>
     </div>

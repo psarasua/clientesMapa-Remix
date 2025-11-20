@@ -11,6 +11,12 @@ import { ClienteFilters } from "~/components/clientes/ClienteFilters";
 import { ClienteMap, LeafletStyles } from "~/components/clientes/ClienteMap";
 import { Pagination } from "~/components/ui/Pagination";
 import { ErrorBoundary as CustomErrorBoundary } from "~/components/ui/ErrorBoundary";
+import { 
+  ClienteTableSkeleton, 
+  ClienteFiltersSkeleton 
+} from "~/components/clientes/ClienteSkeleton";
+import { SkeletonMap } from "~/components/ui/Skeleton";
+import { useNavigationLoading } from "~/hooks/useNavigationLoading";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await redirectIfNotAuthenticated(request);
@@ -78,6 +84,7 @@ export default function ClientesIndex() {
   const navigate = useNavigate();
   const [showMap, setShowMap] = useState(false);
   const [selectedClienteId, setSelectedClienteId] = useState<number | undefined>();
+  const { isLoading } = useNavigationLoading();
 
   const handleSearch = (value: string) => {
     const params = new URLSearchParams(searchParams);
@@ -103,6 +110,39 @@ export default function ClientesIndex() {
   const handleClienteSelect = (cliente: Cliente) => {
     setSelectedClienteId(cliente.id);
   };
+
+  if (isLoading) {
+    return (
+      <PageLayout>
+        <PageHeader
+          title="Clientes"
+          subtitle="Gestiona todos tus clientes"
+          action={
+            <div className="flex gap-2">
+              <Button variant="secondary" disabled>
+                🗺️ Ver Mapa
+              </Button>
+              <Button disabled>
+                + Nuevo Cliente
+              </Button>
+            </div>
+          }
+        />
+
+        <ClienteFiltersSkeleton />
+
+        {showMap ? (
+          <Card padding="md">
+            <SkeletonMap className="h-[600px]" />
+          </Card>
+        ) : (
+          <Card padding="none" className="overflow-hidden">
+            <ClienteTableSkeleton />
+          </Card>
+        )}
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>

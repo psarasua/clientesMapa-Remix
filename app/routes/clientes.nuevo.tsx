@@ -2,6 +2,8 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Form, Link, redirect, useActionData, useNavigation } from "react-router";
 import { redirectIfNotAuthenticated } from "~/lib/auth.server";
 import { createCliente, type CreateCliente } from "~/lib/database.server";
+import { FormPageSkeleton } from "~/components/ui/FormSkeleton";
+import { useNavigationLoading } from "~/hooks/useNavigationLoading";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await redirectIfNotAuthenticated(request);
@@ -64,6 +66,18 @@ export default function NuevoCliente() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
+  const { isLoading } = useNavigationLoading();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <FormPageSkeleton 
+          title="Nuevo Cliente"
+          subtitle="Cargando formulario..."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

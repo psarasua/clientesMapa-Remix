@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Cliente } from '~/types/database';
+import { LoadingSpinner } from '~/components/ui/Loading';
 
 // Declaraciones TypeScript para Leaflet
 declare global {
@@ -18,6 +19,7 @@ export const RepartoMapView = React.forwardRef<any, RepartoMapViewProps>(({ clie
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const [isMapLoading, setIsMapLoading] = useState(true);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -50,6 +52,7 @@ export const RepartoMapView = React.forwardRef<any, RepartoMapViewProps>(({ clie
       );
 
       if (clientesConCoordenadas.length === 0) {
+        setIsMapLoading(false);
         return;
       }
 
@@ -146,6 +149,11 @@ export const RepartoMapView = React.forwardRef<any, RepartoMapViewProps>(({ clie
 
       mapInstanceRef.current = map;
       markersRef.current = markers;
+      
+      // Ocultar loading cuando el mapa esté listo
+      setTimeout(() => {
+        setIsMapLoading(false);
+      }, 500);
     };
 
     loadLeaflet();
@@ -247,31 +255,43 @@ export const RepartoMapView = React.forwardRef<any, RepartoMapViewProps>(({ clie
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
       
-      {/* Leyenda flotante */}
-      <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-3 z-[1000] border border-gray-200">
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2 text-sm text-gray-700">
-            <div style={{
-              background: '#2563eb',
-              color: 'white',
-              width: '20px',
-              height: '20px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '10px',
-              fontWeight: 'bold'
-            }}>
-              #
-            </div>
-            <span>Cliente numerado</span>
-          </div>
-          <div className="text-xs text-gray-500">
-            {clientesConCoordenadas.length} ubicaciones en mapa
+      {/* Loading overlay para el mapa */}
+      {isMapLoading && (
+        <div className="absolute inset-0 bg-gray-100 bg-opacity-75 flex items-center justify-center z-[999]">
+          <div className="text-center">
+            <LoadingSpinner size="lg" />
+            <div className="mt-2 text-sm text-gray-600">Cargando mapa...</div>
           </div>
         </div>
-      </div>
+      )}
+      
+      {/* Leyenda flotante */}
+      {!isMapLoading && (
+        <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-3 z-[1000] border border-gray-200">
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2 text-sm text-gray-700">
+              <div style={{
+                background: '#2563eb',
+                color: 'white',
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '10px',
+                fontWeight: 'bold'
+              }}>
+                #
+              </div>
+              <span>Cliente numerado</span>
+            </div>
+            <div className="text-xs text-gray-500">
+              {clientesConCoordenadas.length} ubicaciones en mapa
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

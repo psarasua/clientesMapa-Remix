@@ -4,6 +4,8 @@ import { redirectIfNotAuthenticated } from "~/lib/auth.server";
 import { getDashboardStats } from "~/lib/database.server";
 import type { DashboardStats, SessionUser } from "~/types/database";
 import { PageLayout, PageHeader } from "~/components/ui/Layout";
+import { DashboardSkeleton } from "~/components/dashboard/DashboardSkeleton";
+import { useNavigationLoading } from "~/hooks/useNavigationLoading";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = redirectIfNotAuthenticated(request);
@@ -14,6 +16,19 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export default function DashboardPage() {
   const { user, stats } = useLoaderData<{ user: SessionUser; stats: DashboardStats }>();
+  const { isLoading } = useNavigationLoading();
+
+  if (isLoading) {
+    return (
+      <PageLayout>
+        <PageHeader
+          title="Dashboard"
+          subtitle="Panel de control principal"
+        />
+        <DashboardSkeleton />
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>

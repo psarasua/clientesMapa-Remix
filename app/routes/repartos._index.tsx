@@ -16,6 +16,11 @@ import { Button } from "~/components/ui/Button";
 import { RepartoTable } from "~/components/repartos/RepartoTable";
 import { RepartoFilters } from "~/components/repartos/RepartoFilters";
 import { Pagination } from "~/components/ui/Pagination";
+import { 
+  RepartoTableSkeleton, 
+  RepartoFiltersSkeleton 
+} from "~/components/repartos/RepartoSkeleton";
+import { useNavigationLoading } from "~/hooks/useNavigationLoading";
 import { useToast } from "~/hooks/useToast";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -122,6 +127,7 @@ export default function RepartosIndex() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { success, error } = useToast();
+  const { isLoading } = useNavigationLoading();
   
   // Hook para manejar notificaciones automáticamente
   useToast();
@@ -193,6 +199,28 @@ export default function RepartosIndex() {
   const handleNewReparto = () => {
     navigate("/repartos/nuevo");
   };
+
+  if (isLoading) {
+    return (
+      <PageLayout>
+        <PageHeader
+          title="Repartos"
+          subtitle="Planificación y gestión de repartos"
+          action={
+            <Button disabled>
+              + Nuevo Reparto
+            </Button>
+          }
+        />
+
+        <RepartoFiltersSkeleton />
+
+        <Card padding="none" className="overflow-hidden">
+          <RepartoTableSkeleton />
+        </Card>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>

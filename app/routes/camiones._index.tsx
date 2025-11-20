@@ -9,6 +9,9 @@ import { Button } from "~/components/ui/Button";
 import { CamionTable } from "~/components/camiones/CamionTable";
 import { CamionFilters } from "~/components/camiones/CamionFilters";
 import { Pagination } from "~/components/ui/Pagination";
+import { CamionTableSkeleton } from "~/components/camiones/CamionSkeleton";
+import { SkeletonCard } from "~/components/ui/Skeleton";
+import { useNavigationLoading } from "~/hooks/useNavigationLoading";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await redirectIfNotAuthenticated(request);
@@ -71,6 +74,7 @@ export default function CamionesIndex() {
   const { camiones, pagination, search } = useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { isLoading } = useNavigationLoading();
 
   const handleSearch = (value: string) => {
     const params = new URLSearchParams(searchParams);
@@ -92,6 +96,35 @@ export default function CamionesIndex() {
   const handleNewCamion = () => {
     navigate("/camiones/nuevo");
   };
+
+  if (isLoading) {
+    return (
+      <PageLayout>
+        <PageHeader
+          title="Camiones"
+          subtitle="Gestiona tu flota de camiones"
+          action={
+            <Button disabled>
+              + Nuevo Camión
+            </Button>
+          }
+        />
+
+        <SkeletonCard className="mb-6 p-4">
+          <div className="flex space-x-4">
+            <div className="flex-1">
+              <div className="h-10 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+        </SkeletonCard>
+
+        <Card padding="none" className="overflow-hidden">
+          <CamionTableSkeleton />
+        </Card>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>
